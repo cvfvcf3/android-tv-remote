@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.tvremote.tv">
+    package="com.example.tvremote.phone">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.INJECT_EVENTS" />
-    <uses-feature android:name="android.software.leanback" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
 
     <application
         android:allowBackup="true"
@@ -17,17 +16,13 @@
 
         <activity
             android:name="com.example.tvremote.MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/Theme.AndroidTVRemote">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <service
-            android:name="com.example.tvremote.service.RemoteService"
-            android:enabled="true"
-            android:exported="false" />
 
     </application>
 

@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.VolumeDown
@@ -19,6 +20,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.tvremote.viewmodel.RemoteViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,8 +34,9 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun RemoteControlApp() {
-    var isConnected by remember { mutableStateOf(false) }
-    var tvIP by remember { mutableStateOf("") }
+    val viewModel: RemoteViewModel = viewModel()
+    val isConnected by viewModel.connectionState.collectAsState()
+    val tvIP by viewModel.tvIP.collectAsState()
     
     Column(
         modifier = Modifier
@@ -44,9 +48,10 @@ fun RemoteControlApp() {
     ) {
         // Header
         Text(
-            "Android TV Remote",
+            "📺 Android TV Remote",
             color = Color.White,
             fontSize = 24.sp,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
             modifier = Modifier.padding(top = 16.dp)
         )
 
@@ -54,67 +59,98 @@ fun RemoteControlApp() {
         if (!isConnected) {
             ConnectionPanel(
                 onConnect = { ip ->
-                    tvIP = ip
-                    isConnected = true
-                }
+                    viewModel.connectToTV(ip)
+                },
+                viewModel = viewModel
             )
         } else {
-            RemoteControlPanel(tvIP)
+            RemoteControlPanel(tvIP, viewModel)
         }
     }
 }
 
 @Composable
-fun ConnectionPanel(onConnect: (String) -> Unit) {
+fun ConnectionPanel(
+    onConnect: (String) -> Unit,
+    viewModel: RemoteViewModel
+) {
     var ip by remember { mutableStateOf("") }
     
     Column(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.9f)
             .background(Color.DarkGray, shape = RoundedCornerShape(12.dp))
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            "Connect to TV",
+            "🔗 Connect to TV",
             color = Color.White,
             fontSize = 18.sp,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 16.dp),
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
         )
         
         TextField(
             value = ip,
             onValueChange = { ip = it },
             label = { Text("Enter TV IP Address") },
+            placeholder = { Text("e.g., 192.168.1.100") },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 12.dp)
+                .padding(bottom = 12.dp),
+            colors = TextFieldDefaults.colors(
+                unfocusedContainerColor = Color.Gray,
+                focusedContainerColor = Color.Gray,
+                unfocusedTextColor = Color.White,
+                focusedTextColor = Color.White
+            )
         )
         
         Button(
             onClick = { if (ip.isNotEmpty()) onConnect(ip) },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF1976D2)
+            )
         ) {
-            Text("Connect")
+            Text(
+                "Connect",
+                fontSize = 16.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+            )
         }
     }
 }
 
 @Composable
-fun RemoteControlPanel(tvIP: String) {
+fun RemoteControlPanel(
+    tvIP: String,
+    viewModel: RemoteViewModel
+) {
     Column(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.95f)
             .background(Color.DarkGray, shape = RoundedCornerShape(12.dp))
             .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Connected Status
+        Text(
+            "✅ Connected to: $tvIP",
+            color = Color.Green,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
         // Power Button
         Button(
-            onClick = { /* Send power command */ },
+            onClick = { viewModel.powerToggle() },
             modifier = Modifier
-                .size(80.dp)
-                .padding(bottom = 20.dp),
+                .size(80.dp),
             colors = ButtonDefaults.buttonColors(Color.Red),
             shape = CircleShape
         ) {
@@ -129,81 +165,133 @@ fun RemoteControlPanel(tvIP: String) {
         // Volume Controls
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 20.dp),
+                .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Button(
-                onClick = { /* Send volume down */ },
+                onClick = { viewModel.volumeDown() },
                 modifier = Modifier.size(60.dp),
-                shape = CircleShape
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF424242)
+                )
             ) {
                 Icon(
                     Icons.Default.VolumeDown,
                     contentDescription = "Volume Down",
-                    tint = Color.White
+                    tint = Color.White,
+                    modifier = Modifier.size(30.dp)
                 )
             }
 
             Text(
                 "Volume",
                 color = Color.White,
-                modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 0.dp)
+                fontSize = 14.sp
             )
 
             Button(
-                onClick = { /* Send volume up */ },
+                onClick = { viewModel.volumeUp() },
                 modifier = Modifier.size(60.dp),
-                shape = CircleShape
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF424242)
+                )
             ) {
                 Icon(
                     Icons.Default.VolumeUp,
                     contentDescription = "Volume Up",
-                    tint = Color.White
+                    tint = Color.White,
+                    modifier = Modifier.size(30.dp)
                 )
             }
         }
 
         // Channel Controls
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 20.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Button(onClick = { /* Channel down */ }) {
-                Text("CH -")
+            Button(
+                onClick = { viewModel.channelDown() },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp)
+                    .padding(horizontal = 8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF1976D2)
+                )
+            ) {
+                Text("CH −", fontSize = 16.sp)
             }
-            Button(onClick = { /* Channel up */ }) {
-                Text("CH +")
+            Button(
+                onClick = { viewModel.channelUp() },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp)
+                    .padding(horizontal = 8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF1976D2)
+                )
+            ) {
+                Text("CH +", fontSize = 16.sp)
             }
         }
 
         // Media Controls
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 20.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Button(onClick = { /* Previous */ }) {
-                Text("⏮ Prev")
+            Button(
+                onClick = { viewModel.mediaPrevious() },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp)
+                    .padding(horizontal = 4.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF388E3C)
+                )
+            ) {
+                Text("⏮", fontSize = 16.sp)
             }
-            Button(onClick = { /* Play/Pause */ }) {
-                Text("⏯ Play")
+            Button(
+                onClick = { viewModel.mediaPlay() },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp)
+                    .padding(horizontal = 4.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF388E3C)
+                )
+            ) {
+                Text("⏯", fontSize = 16.sp)
             }
-            Button(onClick = { /* Next */ }) {
-                Text("⏭ Next")
+            Button(
+                onClick = { viewModel.mediaPause() },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp)
+                    .padding(horizontal = 4.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF388E3C)
+                )
+            ) {
+                Text("⏸", fontSize = 16.sp)
+            }
+            Button(
+                onClick = { viewModel.mediaNext() },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp)
+                    .padding(horizontal = 4.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF388E3C)
+                )
+            ) {
+                Text("⏭", fontSize = 16.sp)
             }
         }
-
-        // Connected IP
-        Text(
-            "Connected to: $tvIP",
-            color = Color.Gray,
-            fontSize = 12.sp,
-            modifier = Modifier.padding(top = 16.dp)
-        )
     }
 }
